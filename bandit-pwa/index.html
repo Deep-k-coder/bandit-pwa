@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ten Thumbnails, One Click — Multi-Armed Bandit</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0B0E17">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bandit Sim">
+<link rel="icon" href="./icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E17;
+    --surface:#131826;
+    --surface2:#1B2131;
+    --border:#262D40;
+    --text:#EDEFF5;
+    --muted:#8891A8;
+    --gold:#F2B84B;
+    --teal:#33D6A6;
+    --coral:#FF6B6B;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(51,214,166,0.08), transparent 60%),
+      radial-gradient(1000px 500px at 90% 0%, rgba(242,184,75,0.07), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', system-ui, sans-serif;
+    padding:28px 20px 60px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  /* ---------- header ---------- */
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    color:var(--teal);
+    text-transform:uppercase;
+    margin-bottom:10px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal);}
+  h1{
+    font-family:'Bebas Neue', 'Arial Narrow', sans-serif;
+    font-weight:400;
+    font-size:clamp(38px,6vw,64px);
+    line-height:0.95;
+    letter-spacing:0.01em;
+    margin:0 0 14px;
+  }
+  h1 span{color:var(--gold);}
+  .lede{
+    color:var(--muted);
+    font-size:15.5px;
+    line-height:1.65;
+    max-width:680px;
+    margin:0 0 8px;
+  }
+  .mapping{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:18px 0 30px;
+  }
+  .chip{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--text);
+    background:var(--surface);
+    border:1px solid var(--border);
+    padding:6px 12px;
+    border-radius:20px;
+  }
+  .chip b{color:var(--gold);font-weight:600;}
+
+  /* ---------- controls ---------- */
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px 20px;
+    margin-bottom:22px;
+    box-shadow:var(--shadow);
+  }
+  .panel-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:22px;
+    align-items:flex-end;
+  }
+  .field{display:flex;flex-direction:column;gap:6px;min-width:130px;}
+  .field label{
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    font-weight:600;
+  }
+  select, input[type=range]{
+    accent-color:var(--teal);
+  }
+  select{
+    background:var(--surface2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+  }
+  .field .valline{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--text);
+  }
+  .btnrow{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap;}
+  button{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    border-radius:9px;
+    padding:10px 16px;
+    border:1px solid var(--border);
+    background:var(--surface2);
+    color:var(--text);
+    cursor:pointer;
+    transition:transform .12s ease, background .15s ease, border-color .15s ease;
+  }
+  button:hover{transform:translateY(-1px);border-color:#3a4260;}
+  button:active{transform:translateY(0);}
+  button.primary{background:var(--teal);color:#06251c;border-color:var(--teal);}
+  button.primary:hover{background:#3fe6b4;}
+  button.ghost{background:transparent;}
+  button.warn{border-color:var(--coral);color:var(--coral);background:transparent;}
+  button.warn:hover{background:rgba(255,107,107,0.1);}
+  button:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+  /* ---------- stats strip ---------- */
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1px;
+    background:var(--border);
+    border:1px solid var(--border);
+    border-radius:14px;
+    overflow:hidden;
+    margin-bottom:26px;
+  }
+  .stat{background:var(--surface);padding:14px 18px;}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
+  .stat .v{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;}
+  .stat .v.gold{color:var(--gold);}
+  .stat .v.teal{color:var(--teal);}
+
+  /* ---------- arm grid ---------- */
+  .section-title{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:22px;
+    letter-spacing:.02em;
+    color:var(--text);
+    margin:0 0 4px;
+  }
+  .section-sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+
+  .arms{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:12px;
+    margin-bottom:30px;
+  }
+  @media (max-width:760px){ .arms{grid-template-columns:repeat(2,1fr);} }
+
+  .arm{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px;
+    overflow:hidden;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
+  .arm.best{border-color:var(--teal);}
+  .thumb{
+    height:64px;
+    border-radius:8px;
+    margin-bottom:10px;
+    position:relative;
+    overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:26px;
+    color:rgba(255,255,255,0.85);
+    letter-spacing:.03em;
+  }
+  .thumb::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.35) 100%);
+  }
+  .arm .idx{position:relative;z-index:2;}
+  .arm .lockrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+  .arm .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .arm .est{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;}
+  .arm .truerate{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);height:14px;}
+  .arm .pulls{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:6px;}
+  .barbg{height:5px;border-radius:4px;background:var(--surface2);margin-top:6px;overflow:hidden;}
+  .barfill{height:100%;background:linear-gradient(90deg,#3fe6b4,#33D6A6);width:0%;transition:width .35s ease;}
+
+  .flash{
+    position:absolute;inset:0;border-radius:12px;pointer-events:none;
+    box-shadow:0 0 0 0 rgba(242,184,75,0);
+  }
+  .arm.pulsed .flash{animation:pulseGlow .55s ease;}
+  @keyframes pulseGlow{
+    0%{box-shadow:0 0 0 0 rgba(242,184,75,0.55);}
+    100%{box-shadow:0 0 0 14px rgba(242,184,75,0);}
+  }
+  .popup{
+    position:absolute;
+    top:16px;left:50%;
+    transform:translate(-50%,0);
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;
+    font-size:14px;
+    z-index:5;
+    opacity:0;
+    pointer-events:none;
+  }
+  .popup.show{animation:floatUp .8s ease forwards;}
+  @keyframes floatUp{
+    0%{opacity:0;transform:translate(-50%,6px);}
+    20%{opacity:1;transform:translate(-50%,-4px);}
+    100%{opacity:0;transform:translate(-50%,-30px);}
+  }
+
+  .arm.selected{border-color:var(--gold);}
+  .best-tag{
+    position:absolute;top:8px;right:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;
+    background:rgba(51,214,166,0.15);
+    color:var(--teal);
+    border:1px solid rgba(51,214,166,0.4);
+    padding:2px 6px;border-radius:10px;
+    z-index:4;
+    letter-spacing:.04em;
+  }
+
+  /* ---------- chart ---------- */
+  .chartpanel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px 20px 10px;
+    margin-bottom:10px;
+  }
+  .legend{display:flex;gap:18px;margin-bottom:6px;flex-wrap:wrap;}
+  .legend div{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+  .swatch{width:10px;height:10px;border-radius:3px;}
+  canvas{width:100%;display:block;}
+
+  footer{color:var(--muted);font-size:12px;text-align:center;margin-top:28px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Reinforcement Learning · Multi-Armed Bandit</div>
+  <h1>Ten Thumbnails,<br><span>One Click.</span></h1>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);letter-spacing:.04em;margin:-6px 0 18px;">by <span style="color:var(--gold);">DEEP KOSHIYA</span></p>
+  <p class="lede">
+    A streaming platform is launching a new show and has ten candidate thumbnail designs.
+    Each thumbnail has its own hidden probability of getting a click when shown to a viewer —
+    unknown to the platform, fixed by audience taste. Every time a viewer loads the page, the
+    system must pick <em>one</em> thumbnail to display. This is the exact shape of the
+    10&#8209;armed bandit problem: repeated choices under uncertainty, where the only way to
+    learn a thumbnail's true click rate is to show it — and every show you spend on a bad one
+    is a click you didn't earn from a better one.
+  </p>
+  <div class="mapping">
+    <div class="chip"><b>arm</b> = thumbnail variant</div>
+    <div class="chip"><b>pull</b> = impression shown to a viewer</div>
+    <div class="chip"><b>reward</b> = click (1) or no click (0)</div>
+    <div class="chip"><b>Q(a)</b> = estimated click rate so far</div>
+    <div class="chip"><b>policy</b> = rule for picking the next thumbnail</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-row">
+      <div class="field">
+        <label for="policy">Policy</label>
+        <select id="policy">
+          <option value="egreedy" selected>ε-greedy</option>
+          <option value="greedy">Greedy (ε = 0)</option>
+          <option value="ucb">UCB1</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="epsilon">Explore rate (ε)</label>
+        <input type="range" id="epsilon" min="0" max="0.5" step="0.01" value="0.1">
+        <div class="valline"><span id="epsilonVal">0.10</span></div>
+      </div>
+      <div class="field">
+        <label for="speed">Speed</label>
+        <input type="range" id="speed" min="1" max="30" step="1" value="8">
+        <div class="valline"><span id="speedVal">8</span> impressions / sec</div>
+      </div>
+      <div class="btnrow">
+        <button id="stepBtn" class="ghost">Step</button>
+        <button id="runBtn" class="primary">Run</button>
+        <button id="revealBtn" class="ghost">Reveal true rates</button>
+        <button id="resetBtn" class="warn">New test</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">Impressions shown</div><div class="v" id="stSteps">0</div></div>
+    <div class="stat"><div class="k">Total clicks</div><div class="v gold" id="stClicks">0</div></div>
+    <div class="stat"><div class="k">Running click rate</div><div class="v" id="stRate">0.0%</div></div>
+    <div class="stat"><div class="k">Best-thumbnail rate</div><div class="v teal" id="stOpt">0.0%</div></div>
+  </div>
+
+  <p class="section-title">The ten variants</p>
+  <p class="section-sub">Each card is one arm. Bar length = share of impressions it has received. Estimated rate updates as it's shown.</p>
+  <div class="arms" id="arms"></div>
+
+  <div class="chartpanel">
+    <div class="legend">
+      <div><span class="swatch" style="background:#F2B84B"></span>Running click rate</div>
+      <div><span class="swatch" style="background:#33D6A6"></span>% of impressions on the best thumbnail</div>
+    </div>
+    <canvas id="chart" height="220"></canvas>
+  </div>
+
+  <footer>Exploration finds the winner. Exploitation cashes in once you know it.</footer>
+</div>
+
+<script>
+(function(){
+  const N_ARMS = 10;
+  const hues = [352, 20, 40, 160, 190, 260, 300, 330, 10, 210]; // varied thumbnail palette
+  let trueProbs = [];
+  let Q = [], counts = [], sumReward = 0, totalSteps = 0, optimalCount = 0;
+  let revealed = false;
+  let running = false;
+  let timer = null;
+  let history = { rate: [], opt: [] };
+  let bestArm = 0;
+
+  const armsEl = document.getElementById('arms');
+  const chart = document.getElementById('chart');
+  const ctx = chart.getContext('2d');
+
+  function randProb(){
+    // spread probabilities so the problem has a clear-ish structure, like real CTR variance
+    return Math.round((0.05 + Math.random()*0.55) * 1000) / 1000;
+  }
+
+  function initArms(){
+    trueProbs = Array.from({length:N_ARMS}, randProb);
+    bestArm = trueProbs.indexOf(Math.max(...trueProbs));
+    Q = new Array(N_ARMS).fill(0);
+    counts = new Array(N_ARMS).fill(0);
+    sumReward = 0; totalSteps = 0; optimalCount = 0;
+    history = { rate: [], opt: [] };
+    revealed = false;
+    document.getElementById('revealBtn').textContent = 'Reveal true rates';
+    renderArms();
+    updateStats();
+    drawChart();
+  }
+
+  function renderArms(){
+    armsEl.innerHTML = '';
+    for(let i=0;i<N_ARMS;i++){
+      const card = document.createElement('div');
+      card.className = 'arm';
+      card.id = 'arm-'+i;
+      card.innerHTML = `
+        <div class="flash"></div>
+        <div class="popup" id="pop-${i}"></div>
+        ${revealed && i===bestArm ? '<div class="best-tag">BEST</div>' : ''}
+        <div class="thumb" style="background:linear-gradient(135deg, hsl(${hues[i]} 70% 32%), hsl(${hues[i]} 70% 20%));">
+          <span class="idx">#${i+1}</span>
+        </div>
+        <div class="lockrow">
+          <span class="label">Est. rate</span>
+          <span class="est" id="est-${i}">—</span>
+        </div>
+        <div class="truerate" id="true-${i}">${revealed ? 'true '+(trueProbs[i]*100).toFixed(1)+'%' : ''}</div>
+        <div class="barbg"><div class="barfill" id="bar-${i}"></div></div>
+        <div class="pulls" id="pulls-${i}">0 impressions</div>
+      `;
+      if(revealed && i===bestArm) card.classList.add('best');
+      armsEl.appendChild(card);
+    }
+  }
+
+  function updateArmDisplay(i){
+    const est = counts[i]>0 ? (Q[i]*100).toFixed(1)+'%' : '—';
+    document.getElementById('est-'+i).textContent = est;
+    document.getElementById('pulls-'+i).textContent = counts[i]+' impression'+(counts[i]===1?'':'s');
+    const maxCount = Math.max(1, ...counts);
+    document.getElementById('bar-'+i).style.width = (counts[i]/maxCount*100)+'%';
+  }
+
+  function updateStats(){
+    document.getElementById('stSteps').textContent = totalSteps;
+    document.getElementById('stClicks').textContent = sumReward;
+    document.getElementById('stRate').textContent = totalSteps? ((sumReward/totalSteps)*100).toFixed(1)+'%' : '0.0%';
+    document.getElementById('stOpt').textContent = totalSteps? ((optimalCount/totalSteps)*100).toFixed(1)+'%' : '0.0%';
+  }
+
+  function chooseArm(){
+    const policy = document.getElementById('policy').value;
+    if(policy === 'greedy' || (policy==='egreedy' && Math.random() >= parseFloat(document.getElementById('epsilon').value))){
+      // exploit: pick current best estimate (break ties randomly), but if nothing tried yet, pick randomly
+      if(counts.every(c=>c===0)) return Math.floor(Math.random()*N_ARMS);
+      const maxQ = Math.max(...Q);
+      const best = Q.map((q,i)=>q===maxQ?i:-1).filter(i=>i>=0);
+      return best[Math.floor(Math.random()*best.length)];
+    }
+    if(policy === 'egreedy'){
+      return Math.floor(Math.random()*N_ARMS);
+    }
+    if(policy === 'ucb'){
+      for(let i=0;i<N_ARMS;i++) if(counts[i]===0) return i;
+      const c = 2;
+      let bestI=0, bestVal=-Infinity;
+      for(let i=0;i<N_ARMS;i++){
+        const val = Q[i] + c*Math.sqrt(Math.log(totalSteps+1)/counts[i]);
+        if(val>bestVal){bestVal=val;bestI=i;}
+      }
+      return bestI;
+    }
+    return Math.floor(Math.random()*N_ARMS);
+  }
+
+  function step(){
+    const a = chooseArm();
+    const reward = Math.random() < trueProbs[a] ? 1 : 0;
+    counts[a]++;
+    Q[a] += (reward - Q[a]) / counts[a];
+    sumReward += reward;
+    totalSteps++;
+    if(a === bestArm) optimalCount++;
+
+    updateArmDisplay(a);
+    animatePull(a, reward);
+    updateStats();
+
+    history.rate.push(sumReward/totalSteps);
+    history.opt.push(optimalCount/totalSteps);
+    if(history.rate.length > 600){ history.rate.shift(); history.opt.shift(); }
+    drawChart();
+  }
+
+  function animatePull(i, reward){
+    const card = document.getElementById('arm-'+i);
+    document.querySelectorAll('.arm.selected').forEach(el=>el.classList.remove('selected'));
+    card.classList.add('selected');
+    card.classList.remove('pulsed'); void card.offsetWidth; card.classList.add('pulsed');
+    const pop = document.getElementById('pop-'+i);
+    pop.textContent = reward ? '+1 click' : 'no click';
+    pop.style.color = reward ? '#F2B84B' : '#5b6377';
+    pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+  }
+
+  function drawChart(){
+    const w = chart.width = chart.clientWidth * devicePixelRatio;
+    const h = chart.height = 220 * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    const cw = chart.clientWidth, ch = 220;
+    ctx.clearRect(0,0,cw,ch);
+
+    // grid
+    ctx.strokeStyle = '#20263a';
+    ctx.lineWidth = 1;
+    for(let g=0; g<=4; g++){
+      const y = 10 + (ch-30)*g/4;
+      ctx.beginPath(); ctx.moveTo(40,y); ctx.lineTo(cw-10,y); ctx.stroke();
+      ctx.fillStyle = '#5b6377';
+      ctx.font = '11px JetBrains Mono, monospace';
+      ctx.fillText((100 - g*25)+'%', 4, y+4);
+    }
+
+    const n = history.rate.length;
+    if(n < 2){ return; }
+    const plotW = cw - 50;
+    const x0 = 40;
+    function xOf(idx){ return x0 + plotW * idx/(n-1); }
+    function yOf(val){ return 10 + (ch-30) * (1 - val); }
+
+    function drawLine(arr, color){
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      arr.forEach((v,idx)=>{
+        const x = xOf(idx), y = yOf(v);
+        if(idx===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    }
+    drawLine(history.opt, '#33D6A6');
+    drawLine(history.rate, '#F2B84B');
+  }
+
+  function tick(){ step(); }
+
+  document.getElementById('epsilon').addEventListener('input', e=>{
+    document.getElementById('epsilonVal').textContent = parseFloat(e.target.value).toFixed(2);
+  });
+  document.getElementById('speed').addEventListener('input', e=>{
+    document.getElementById('speedVal').textContent = e.target.value;
+    if(running) startRun();
+  });
+  document.getElementById('policy').addEventListener('change', e=>{
+    document.getElementById('epsilon').disabled = e.target.value !== 'egreedy';
+  });
+
+  document.getElementById('stepBtn').addEventListener('click', ()=>{ if(!running) step(); });
+
+  function startRun(){
+    stopRun();
+    const speed = parseFloat(document.getElementById('speed').value);
+    timer = setInterval(tick, 1000/speed);
+  }
+  function stopRun(){ if(timer){ clearInterval(timer); timer=null; } }
+
+  document.getElementById('runBtn').addEventListener('click', function(){
+    running = !running;
+    this.textContent = running ? 'Pause' : 'Run';
+    this.classList.toggle('primary', !running ? true : true);
+    if(running) startRun(); else stopRun();
+  });
+
+  document.getElementById('revealBtn').addEventListener('click', function(){
+    revealed = !revealed;
+    this.textContent = revealed ? 'Hide true rates' : 'Reveal true rates';
+    renderArms();
+    for(let i=0;i<N_ARMS;i++) updateArmDisplay(i);
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    running = false;
+    stopRun();
+    document.getElementById('runBtn').textContent = 'Run';
+    initArms();
+  });
+
+  window.addEventListener('resize', drawChart);
+
+  initArms();
+})();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {
+      // Offline install still works even if this registration attempt fails on first load
+    });
+  });
+}
+</script>
+</body>
+</html>
