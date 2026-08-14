@@ -1,51 +1,146 @@
-# 🎰 Multi-Armed Bandit Interactive Simulation
+# 🎰 Multi-Armed Bandit — Interactive PWA
 
-An interactive web-based simulation for learning the **Multi-Armed Bandit problem** and understanding the exploration–exploitation trade-off in reinforcement learning.
+### A visual reinforcement-learning simulation for understanding exploration vs. exploitation.
+
+[![PWA](https://img.shields.io/badge/App-PWA-5C3EE8)](#)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-F7DF1E?logo=javascript&logoColor=black)](#)
+[![Reinforcement Learning](https://img.shields.io/badge/Topic-Reinforcement%20Learning-33D6A6)](#)
 
 ## 📌 Overview
 
-The Multi-Armed Bandit problem models sequential decision-making under uncertainty. An agent repeatedly selects among actions (arms), observes rewards, and learns which choices are likely to produce higher long-term reward.
+This project turns the **10-armed bandit problem** into an interactive browser simulation.
 
-This project provides a simple visual environment for experimenting with bandit strategies and observing how different policies behave over time.
+Each thumbnail represents an arm with an unknown click probability. On every impression, the policy chooses one thumbnail, receives a binary reward (click or no click), updates its estimates, and decides what to try next.
 
-## 🧠 Core Concept
+The goal is to make the exploration–exploitation trade-off visible rather than purely theoretical.
+
+## 🧠 Core Mapping
+
+| Bandit concept | Simulation |
+|---|---|
+| Arm | Thumbnail variant |
+| Pull | Impression shown to a viewer |
+| Reward | Click (`1`) or no click (`0`) |
+| Q(a) | Estimated click rate |
+| Policy | Rule used to select the next thumbnail |
+
+## 🎯 Policies Implemented
+
+The current UI exposes these action-selection policies:
+
+### ε-greedy
+
+With probability ε, explore a random arm; otherwise exploit the arm with the highest estimated reward.
 
 ```text
-Bandit Environment
-       ↓
-Select an Arm
-       ↓
-Receive Reward
-       ↓
-Update Knowledge
-       ↓
-Choose Next Arm
-       ↓
-Maximize Reward / Minimize Regret
+if random() < ε:
+    choose a random arm
+else:
+    choose argmax Q(a)
 ```
 
-## 🎯 Learning Objectives
+### Greedy
 
-- Understand exploration vs. exploitation.
-- Compare action-selection strategies.
-- Observe cumulative reward and regret.
-- Build intuition for sequential decision-making.
-- Experiment with reinforcement-learning concepts through an interactive UI.
+Always selects the arm with the highest current estimated reward. This provides a useful baseline and demonstrates the risk of insufficient exploration.
+
+### UCB1
+
+Uses an upper-confidence-bound bonus so that arms with limited observations receive additional consideration.
+
+```text
+UCB(a) = Q(a) + sqrt(2 ln(t) / N(a))
+```
+
+where `t` is the total number of impressions and `N(a)` is the number of times arm `a` has been selected.
+
+## 🔄 Simulation Workflow
+
+```text
+┌─────────────────────┐
+│  10 Thumbnail Arms  │
+└──────────┬──────────┘
+           ↓
+┌─────────────────────┐
+│ Select an arm using │
+│ the chosen policy   │
+└──────────┬──────────┘
+           ↓
+┌─────────────────────┐
+│ Observe reward      │
+│ click = 1 / no = 0  │
+└──────────┬──────────┘
+           ↓
+┌─────────────────────┐
+│ Update Q(a), pulls  │
+│ and cumulative data │
+└──────────┬──────────┘
+           ↓
+┌─────────────────────┐
+│ Repeat / compare    │
+└─────────────────────┘
+```
 
 ## ✨ Features
 
-- Interactive bandit simulation
-- Visual comparison of action-selection behavior
-- Reward-based feedback
-- Browser-based interface
-- Lightweight front-end implementation
+- Interactive 10-arm bandit environment
+- ε-greedy policy with adjustable ε
+- Greedy baseline
+- UCB1 policy
+- Step-by-step simulation
+- Continuous run mode
+- Adjustable simulation speed
+- Estimated reward and pull statistics
+- Running click-rate tracking
+- Best-thumbnail rate display
+- Cumulative performance visualization
+- Reveal option for inspecting the hidden reward rates
+- Responsive browser UI
+- Installable Progressive Web App structure
+
+## 📊 What You Can Explore
+
+Try the same environment with different policies and observe:
+
+```text
+Exploration  ←──────────────→  Exploitation
+
+ε = high                         ε = 0
+More discovery                   More exploitation
+More experimentation             Faster commitment
+```
+
+Useful experiments:
+
+1. Start with **ε-greedy, ε = 0.10**.
+2. Run the simulation for several hundred impressions.
+3. Repeat with **Greedy**.
+4. Repeat with **UCB1**.
+5. Compare cumulative clicks and estimated rates.
+6. Use **Reveal true rates** after an experiment to understand why the policies behaved differently.
 
 ## 🛠️ Tech Stack
 
 - HTML5
 - CSS3
 - JavaScript
-- Progressive Web App (PWA) concepts
+- Canvas-based visualization
+- Web App Manifest
+- Service Worker / PWA APIs
+
+## 📂 Repository Structure
+
+```text
+bandit-pwa/
+├── README.md
+└── bandit-pwa/
+    ├── index.html       # Main UI, simulation logic and visualization
+    ├── manifest.json    # PWA metadata
+    ├── sw.js            # Service worker
+    ├── icon-192.png     # PWA icon
+    └── icon-512.png     # PWA icon
+```
+
+The current repository keeps the web application inside the nested `bandit-pwa/` directory.
 
 ## 🚀 Run Locally
 
@@ -56,38 +151,72 @@ git clone https://github.com/Deep-k-coder/bandit-pwa.git
 cd bandit-pwa
 ```
 
-Then open the project in a local browser/server environment. For a more realistic PWA test, serve the directory with a local HTTP server rather than opening files directly.
+Because this is a PWA, serve the application through a local HTTP server rather than opening `index.html` directly.
 
-## 📊 Concepts Demonstrated
+For example, if Python is installed:
 
-```text
-Exploration
-    +
-Exploitation
-    ↓
-Action Selection
-    ↓
-Reward Collection
-    ↓
-Cumulative Reward
-    ↓
-Regret Analysis
+```bash
+cd bandit-pwa
+python -m http.server 8000
 ```
 
-## 🔬 Reinforcement Learning Context
+Then open the local server in your browser.
 
-The project is a practical visualization of the **n-armed bandit problem**, a foundational reinforcement-learning setting where an agent must make repeated choices without knowing the underlying reward distributions in advance.
+## 📱 PWA Support
+
+The project includes:
+
+- `manifest.json` for application metadata
+- 192px and 512px application icons
+- `sw.js` service worker
+- Mobile-friendly viewport configuration
+
+## 📈 Results & Interpretation
+
+The simulation is designed for **interactive learning**, so results depend on the generated hidden reward rates and the selected policy.
+
+Instead of claiming a fixed accuracy or performance score, use repeated runs to compare:
+
+- Total clicks
+- Running click rate
+- Estimated arm values
+- Pull counts
+- Performance relative to the best available arm
+
+## 🚧 Future Improvements
+
+- Add Thompson Sampling
+- Add configurable number of arms
+- Add configurable reward distributions
+- Add regret tracking and a dedicated regret chart
+- Add experiment export (CSV/JSON)
+- Add persistent experiment history
+- Add side-by-side policy comparison mode
+- Add automated benchmark runs
+
+## 🎓 Learning Outcomes
+
+This project demonstrates practical understanding of:
+
+- Sequential decision-making
+- Exploration vs. exploitation
+- Action-value estimation
+- ε-greedy action selection
+- UCB1
+- Reward accumulation
+- Online learning
+- Interactive data visualization
+- Progressive Web App development
 
 ## 👨‍💻 Author
 
-**Deep Koshiya**
+**Deep Koshiya**  
+AI & ML Developer • Python Developer • Computer Vision • Deep Learning
 
-GitHub: https://github.com/Deep-k-coder
+- GitHub: https://github.com/Deep-k-coder
+- LinkedIn: https://www.linkedin.com/in/deepkoshiya/
+- Portfolio: https://deep-about.netlify.app
 
-## 🚀 Future Improvements
+---
 
-- Add configurable bandit environments.
-- Add more exploration policies such as ε-greedy, UCB, and Thompson Sampling.
-- Add reward and regret charts.
-- Add experiment export and comparison.
-- Improve accessibility and mobile interaction.
+⭐ If you find this project useful for learning reinforcement learning, consider starring the repository.
